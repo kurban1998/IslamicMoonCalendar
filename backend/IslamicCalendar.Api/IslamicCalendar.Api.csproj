@@ -13,6 +13,9 @@
          "dotnet add package Swashbuckle.AspNetCore", чтобы подтянуть
          актуальную на момент сборки версию -->
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
+    <!-- Версия ориентировочная — выполните "dotnet add package Telegram.Bot",
+         чтобы подтянуть актуальную на момент сборки версию -->
+    <PackageReference Include="Telegram.Bot" Version="22.3.0" />
   </ItemGroup>
 
   <ItemGroup>

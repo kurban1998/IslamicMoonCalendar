@@ -9,4 +9,7 @@ public class DayCardResponse
     public PrayerTimes Prayers { get; set; } = new();
     public QuoteOfDay Quote { get; set; } = new();
     public FridayInfo Friday { get; set; } = new();
+
+    /// <summary>Город/населённый пункт, по которому рассчитано время намазов.</summary>
+    public string LocationName { get; set; } = string.Empty;
 }

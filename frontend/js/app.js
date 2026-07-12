@@ -85,13 +85,13 @@ const el = {
   cardHijriDay: document.getElementById("cardHijriDay"),
   cardHijriMonth: document.getElementById("cardHijriMonth"),
   cardGregDate: document.getElementById("cardGregDate"),
+  cardLocation: document.getElementById("cardLocation"),
   prayerList: document.getElementById("prayerTimesList"),
   fridaySection: document.getElementById("fridaySection"),
   fridayList: document.getElementById("fridayList"),
   quoteTypeLabel: document.getElementById("quoteTypeLabel"),
   quoteText: document.getElementById("quoteText"),
   quoteSource: document.getElementById("quoteSource"),
-  cardLocation: document.getElementById('cardLocation'),
 };
 
 // ============================================================
@@ -232,12 +232,13 @@ function renderDayCard(card) {
     day: "numeric", month: "long", year: "numeric"
   });
 
-  el.cardLocation.textContent = card.location || card.city || '—';
-
   // Фаза Луны
   const phaseFraction = card.moon.ageDays / card.moon.synodicMonthDays;
   el.moonIcon.innerHTML = buildMoonPhaseSvg(phaseFraction);
-  el.moonCaption.textContent = `${card.moon.phaseNameRu} · освещённость: ${Math.round(card.moon.illuminationPercent)}%`;
+  el.moonCaption.textContent = `${card.moon.phaseNameRu} · освещённость ${Math.round(card.moon.illuminationPercent)}%`;
+
+  // Город/место, по которому рассчитано время намазов
+  el.cardLocation.textContent = card.locationName || "—";
 
   // Время намазов
   const prayers = [

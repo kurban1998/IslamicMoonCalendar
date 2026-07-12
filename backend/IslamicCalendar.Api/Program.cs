@@ -7,6 +7,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<IslamicCalendarOptions>(
     builder.Configuration.GetSection(IslamicCalendarOptions.SectionName));
+builder.Services.Configure<TelegramBotOptions>(
+    builder.Configuration.GetSection(TelegramBotOptions.SectionName));
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -50,10 +52,21 @@ builder.Services.AddHttpClient<IQuranService, QuranService>((sp, client) =>
     client.Timeout = TimeSpan.FromSeconds(10);
 });
 
+builder.Services.AddHttpClient<IGeocodingService, NominatimGeocodingService>(client =>
+{
+    client.BaseAddress = new Uri("https://nominatim.openstreetmap.org/");
+    // Политика использования Nominatim требует осмысленный User-Agent с контактом —
+    // замените e-mail на свой перед продакшен-использованием
+    client.DefaultRequestHeaders.UserAgent.ParseAdd(
+        "IslamicCalendarMiniApp/1.0 (contact: replace-with-your-email@example.com)");
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
+
 builder.Services.AddSingleton<IMoonPhaseService, MoonPhaseService>();
 builder.Services.AddSingleton<IHadithService, HadithService>();
 builder.Services.AddSingleton<IFridayReminderService, FridayReminderService>();
 builder.Services.AddScoped<IQuoteOfDayService, QuoteOfDayService>();
+builder.Services.AddHostedService<TelegramBotHostedService>();
 
 var app = builder.Build();
 
@@ -92,6 +105,7 @@ api.MapGet("/day", async (
         IMoonPhaseService moonPhaseService,
         IQuoteOfDayService quoteOfDayService,
         IFridayReminderService fridayReminderService,
+        IGeocodingService geocodingService,
         IOptions<IslamicCalendarOptions> options,
         CancellationToken ct) =>
     {
@@ -101,12 +115,19 @@ api.MapGet("/day", async (
         var opts = options.Value;
         var latitude = lat ?? opts.DefaultLatitude;
         var longitude = lon ?? opts.DefaultLongitude;
+        var locationProvided = lat.HasValue && lon.HasValue;
 
         var hijriTask = hijriService.ConvertAsync(parsedDate, ct);
         var prayersTask = prayerTimesService.GetPrayerTimesAsync(parsedDate, latitude, longitude, ct);
         var quoteTask = quoteOfDayService.GetQuoteAsync(parsedDate, ct);
 
-        await Task.WhenAll(hijriTask, prayersTask, quoteTask);
+        // Город определяем только если координаты реально пришли от клиента —
+        // иначе просто берём название по умолчанию из конфига, не дёргая Nominatim
+        var locationTask = locationProvided
+            ? geocodingService.GetLocationNameAsync(latitude, longitude, ct)
+            : Task.FromResult(opts.DefaultCityName);
+
+        await Task.WhenAll(hijriTask, prayersTask, quoteTask, locationTask);
 
         var response = new DayCardResponse
         {
@@ -115,7 +136,8 @@ api.MapGet("/day", async (
             Prayers = prayersTask.Result,
             Moon = moonPhaseService.GetMoonPhase(parsedDate),
             Quote = quoteTask.Result,
-            Friday = fridayReminderService.GetFridayInfo(parsedDate)
+            Friday = fridayReminderService.GetFridayInfo(parsedDate),
+            LocationName = locationTask.Result
         };
 
         return Results.Ok(response);

@@ -48,8 +48,10 @@
     <div class="day-card__handle"></div>
 
     <div class="day-card__top">
-      <div id="moonIcon" class="day-card__moon"></div>
-      <div id="cardLocation" class="day-card__location">—</div> 
+      <div class="day-card__moon-block">
+        <div id="moonIcon" class="day-card__moon"></div>
+        <span class="day-card__moon-label">Фаза луны</span>
+      </div>
       <div class="day-card__weekday" id="cardWeekday">—</div>
     </div>
 
@@ -62,7 +64,10 @@
     <div class="day-card__moon-caption" id="moonCaption">—</div>
 
     <section class="day-card__section">
-      <h3 class="day-card__section-title">Время намазов</h3>
+      <div class="day-card__section-header">
+        <h3 class="day-card__section-title">Время намазов</h3>
+        <span id="cardLocation" class="day-card__location">—</span>
+      </div>
       <div id="prayerTimesList" class="prayer-list"></div>
     </section>
 
