@@ -67,7 +67,7 @@ builder.Services.AddHttpClient<NominatimGeocodingProvider>(client =>
     // Политика использования Nominatim требует осмысленный User-Agent с контактом —
     // замените e-mail на свой перед продакшен-использованием
     client.DefaultRequestHeaders.UserAgent.ParseAdd(
-        "IslamicCalendarMiniApp/1.0 (contact: kurban.kurban1998@mail.ru");
+        "IslamicCalendarMiniApp/1.0 (contact: kurban.kurban1998@mail.ru)");
     client.Timeout = TimeSpan.FromSeconds(5);
 });
 
