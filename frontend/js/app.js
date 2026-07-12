@@ -236,7 +236,7 @@ function renderDayCard(card) {
   // Фаза Луны
   const phaseFraction = card.moon.ageDays / card.moon.synodicMonthDays;
   el.moonIcon.innerHTML = buildMoonPhaseSvg(phaseFraction);
-  el.moonCaption.textContent = `${card.moon.phaseNameRu} · освещённость ${Math.round(card.moon.illuminationPercent)}%`;
+  el.moonCaption.textContent = `${card.moon.phaseNameRu} · освещённость: ${Math.round(card.moon.illuminationPercent)}%`;
 
   // Время намазов
   const prayers = [
