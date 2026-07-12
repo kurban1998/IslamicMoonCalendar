@@ -91,6 +91,7 @@ const el = {
   quoteTypeLabel: document.getElementById("quoteTypeLabel"),
   quoteText: document.getElementById("quoteText"),
   quoteSource: document.getElementById("quoteSource"),
+  cardLocation: document.getElementById('cardLocation'),
 };
 
 // ============================================================
@@ -232,6 +233,15 @@ function renderDayCard(card) {
   el.cardGregDate.textContent = gregDate.toLocaleDateString("ru-RU", {
     day: "numeric", month: "long", year: "numeric"
   });
+
+  const locationName = card.location || card.city || null;
+  if (locationName) {
+    el.cardLocation.textContent = locationName;
+  } else if (userLocation) {
+    el.cardLocation.textContent = `📍 ${userLocation.lat.toFixed(4)}, ${userLocation.lon.toFixed(4)}`;
+  } else {
+    el.cardLocation.textContent = 'Местоположение не определено';
+  }
 
   // Фаза Луны
   const phaseFraction = card.moon.ageDays / card.moon.synodicMonthDays;
