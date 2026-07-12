@@ -232,14 +232,7 @@ function renderDayCard(card) {
     day: "numeric", month: "long", year: "numeric"
   });
 
-  const locationName = card.location || card.city || null;
-  if (locationName) {
-    el.cardLocation.textContent = locationName;
-  } else if (userLocation) {
-    el.cardLocation.textContent = `📍 ${userLocation.lat.toFixed(4)}, ${userLocation.lon.toFixed(4)}`;
-  } else {
-    el.cardLocation.textContent = 'Местоположение не определено';
-  }
+  el.cardLocation.textContent = card.location || card.city || '—';
 
   // Фаза Луны
   const phaseFraction = card.moon.ageDays / card.moon.synodicMonthDays;
