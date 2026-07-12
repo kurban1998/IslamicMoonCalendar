@@ -1,0 +1,391 @@
+/* ============================================================
+   Токены дизайна
+   Палитра: ледяной бело-голубой, без клише (без кремового/терракота).
+   Акцентный узор: восьмиконечная звезда (руб-эль-хизб) — единственный
+   «рискованный» декоративный элемент, используется точечно.
+   Шрифты: Manrope (заголовки/крупные цифры) + Inter (текст/данные).
+   ============================================================ */
+:root {
+  --bg: #EAF3FF;
+  --surface: #FFFFFF;
+  --surface-soft: #F4F9FF;
+  --primary: #1B63C4;
+  --primary-dark: #0E3E7D;
+  --accent: #4FB6E8;
+  --ink: #10243F;
+  --ink-muted: #5C7699;
+  --border: #DCE9FA;
+  --shadow: 0 12px 32px rgba(14, 62, 125, 0.14);
+  --radius-lg: 24px;
+  --radius-md: 16px;
+  --radius-sm: 10px;
+
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  max-width: 480px;
+  margin: 0 auto;
+  padding-bottom: 32px;
+  min-height: 100vh;
+}
+
+.hidden { display: none !important; }
+
+/* ---------- Шапка / переключение месяца ---------- */
+
+.month-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 12px;
+  background: linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: #fff;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  overflow: hidden;
+}
+
+.month-header__pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.14;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%23FFFFFF' stroke-width='1.1'%3E%3Cpath d='M36 4 L44 28 L68 28 L48 42 L56 66 L36 52 L16 66 L24 42 L4 28 L28 28 Z'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 72px 72px;
+  pointer-events: none;
+}
+
+.month-header__titles {
+  text-align: center;
+  flex: 1;
+  z-index: 1;
+}
+
+.month-header__hijri {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 800;
+  font-size: 19px;
+  letter-spacing: 0.2px;
+}
+
+.month-header__greg {
+  font-size: 13px;
+  color: rgba(255,255,255,0.78);
+  margin-top: 2px;
+}
+
+.nav-btn {
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.16);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.nav-btn:active { background: rgba(255,255,255,0.32); }
+
+/* ---------- Дни недели ---------- */
+
+.weekday-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  padding: 16px 10px 4px;
+  gap: 4px;
+}
+.weekday-row span {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+}
+
+/* ---------- Сетка календаря ---------- */
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  padding: 4px 10px 12px;
+}
+
+.day-cell {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+.day-cell:active { transform: scale(0.94); }
+
+.day-cell.empty { visibility: hidden; }
+
+.day-cell__greg {
+  font-size: 10px;
+  color: var(--ink-muted);
+  position: absolute;
+  top: 4px;
+  right: 6px;
+}
+
+.day-cell__hijri {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--ink);
+}
+
+.day-cell.is-friday {
+  background: var(--surface-soft);
+  border-color: var(--accent);
+}
+.day-cell.is-friday .day-cell__hijri { color: var(--primary); }
+
+.day-cell.is-today {
+  background: var(--primary);
+  border-color: var(--primary);
+  box-shadow: var(--shadow);
+}
+.day-cell.is-today .day-cell__hijri,
+.day-cell.is-today .day-cell__greg { color: #fff; }
+
+.loading-indicator {
+  text-align: center;
+  padding: 24px;
+  color: var(--ink-muted);
+  font-size: 14px;
+}
+
+/* ---------- Карточка дня (нижняя шторка) ---------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 30, 58, 0.45);
+  display: flex;
+  align-items: flex-end;
+  z-index: 50;
+  backdrop-filter: blur(2px);
+}
+
+.day-card {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: 28px 28px 0 0;
+  padding: 10px 22px 28px;
+  box-shadow: 0 -8px 40px rgba(14, 62, 125, 0.25);
+  animation: slideUp 0.24s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.day-card__handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  margin: 6px auto 14px;
+}
+
+.day-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.day-card__moon {
+  width: 56px;
+  height: 56px;
+  filter: drop-shadow(0 4px 10px rgba(14, 62, 125, 0.18));
+}
+
+.day-card__weekday {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--surface-soft);
+  padding: 6px 12px;
+  border-radius: 100px;
+}
+
+.day-card__dates {
+  text-align: center;
+  margin-top: 6px;
+}
+
+.day-card__hijri-day {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 800;
+  font-size: 56px;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.day-card__hijri-month {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--primary);
+  margin-top: 4px;
+}
+
+.day-card__greg-date {
+  font-size: 13px;
+  color: var(--ink-muted);
+  margin-top: 4px;
+}
+
+.day-card__moon-caption {
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  margin-top: 10px;
+}
+
+.day-card__section {
+  margin-top: 22px;
+}
+
+.day-card__section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--ink-muted);
+  margin: 0 0 10px;
+}
+
+.prayer-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.prayer-list__item {
+  background: var(--surface-soft);
+  border-radius: var(--radius-sm);
+  padding: 10px 6px;
+  text-align: center;
+}
+
+.prayer-list__name {
+  font-size: 11.5px;
+  color: var(--ink-muted);
+}
+
+.prayer-list__time {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--primary-dark);
+  margin-top: 2px;
+}
+
+.friday-section {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+.friday-section .day-card__section-title { color: var(--primary); }
+
+.friday-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.friday-list li {
+  font-size: 13.5px;
+  line-height: 1.4;
+  padding-left: 22px;
+  position: relative;
+}
+.friday-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.quote-section {
+  background: linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  color: #fff;
+}
+
+.quote-section__label {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.quote-section__text {
+  font-size: 15px;
+  line-height: 1.55;
+  margin: 0 0 10px;
+}
+
+.quote-section__source {
+  font-size: 12.5px;
+  color: rgba(255,255,255,0.75);
+}
+
+.close-btn {
+  width: 100%;
+  margin-top: 24px;
+  padding: 14px;
+  border: none;
+  border-radius: 100px;
+  background: var(--surface-soft);
+  color: var(--primary-dark);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+.close-btn:active { background: var(--border); }
+
+@media (prefers-reduced-motion: reduce) {
+  .day-card { animation: none; }
+}

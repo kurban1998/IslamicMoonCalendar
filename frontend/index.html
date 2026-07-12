@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Исламский календарь</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="css/style.css" />
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- Шапка со сменой месяца -->
+  <header class="month-header">
+    <div class="month-header__pattern" aria-hidden="true"></div>
+    <button id="prevMonth" class="nav-btn" aria-label="Предыдущий месяц">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+
+    <div class="month-header__titles">
+      <div id="hijriMonthTitle" class="month-header__hijri">—</div>
+      <div id="gregMonthTitle" class="month-header__greg">—</div>
+    </div>
+
+    <button id="nextMonth" class="nav-btn" aria-label="Следующий месяц">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </header>
+
+  <!-- Дни недели -->
+  <div class="weekday-row" id="weekdayRow"></div>
+
+  <!-- Сетка календаря -->
+  <main id="calendarGrid" class="calendar-grid" aria-live="polite"></main>
+
+  <div id="loadingIndicator" class="loading-indicator hidden">Загрузка…</div>
+</div>
+
+<!-- Нижняя шторка — карточка дня -->
+<div id="dayCardOverlay" class="overlay hidden">
+  <div id="dayCardSheet" class="day-card hidden">
+    <div class="day-card__handle"></div>
+
+    <div class="day-card__top">
+      <div id="moonIcon" class="day-card__moon"></div>
+      <div class="day-card__weekday" id="cardWeekday">—</div>
+    </div>
+
+    <div class="day-card__dates">
+      <div id="cardHijriDay" class="day-card__hijri-day">—</div>
+      <div id="cardHijriMonth" class="day-card__hijri-month">—</div>
+      <div id="cardGregDate" class="day-card__greg-date">—</div>
+    </div>
+
+    <div class="day-card__moon-caption" id="moonCaption">—</div>
+
+    <section class="day-card__section">
+      <h3 class="day-card__section-title">Время намазов</h3>
+      <div id="prayerTimesList" class="prayer-list"></div>
+    </section>
+
+    <section id="fridaySection" class="day-card__section friday-section hidden">
+      <h3 class="day-card__section-title">Пятница — день собрания</h3>
+      <ul id="fridayList" class="friday-list"></ul>
+    </section>
+
+    <section class="day-card__section quote-section">
+      <div id="quoteTypeLabel" class="quote-section__label">—</div>
+      <p id="quoteText" class="quote-section__text">—</p>
+      <div id="quoteSource" class="quote-section__source">—</div>
+    </section>
+
+    <button id="closeCard" class="close-btn">Закрыть</button>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
