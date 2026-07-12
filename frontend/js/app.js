@@ -203,7 +203,6 @@ async function openDayCard(dateStr) {
   try {
     const params = new URLSearchParams({ date: dateStr });
     if (userLocation) {
-      console.log("Используем геолокацию:", userLocation);
       params.set("lat", userLocation.lat);
       params.set("lon", userLocation.lon);
     }
@@ -211,7 +210,6 @@ async function openDayCard(dateStr) {
     const res = await fetch(`${API_BASE}/day?${params.toString()}`);
     if (!res.ok) throw new Error("Не удалось загрузить карточку дня");
     const card = await res.json();
-    console.log("Данные дня:", card);
     renderDayCard(card);
   } catch (err) {
     console.error(err);
