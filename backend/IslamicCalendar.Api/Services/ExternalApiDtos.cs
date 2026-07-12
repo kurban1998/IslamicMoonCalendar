@@ -76,6 +76,7 @@ internal sealed class AlquranSurah
 internal sealed class NominatimReverseResponse
 {
     [JsonPropertyName("address")] public NominatimAddress? Address { get; set; }
+    [JsonPropertyName("display_name")] public string? DisplayName { get; set; }
 }
 
 internal sealed class NominatimAddress
@@ -84,6 +85,9 @@ internal sealed class NominatimAddress
     [JsonPropertyName("town")] public string? Town { get; set; }
     [JsonPropertyName("village")] public string? Village { get; set; }
     [JsonPropertyName("municipality")] public string? Municipality { get; set; }
+    [JsonPropertyName("city_district")] public string? CityDistrict { get; set; }
+    [JsonPropertyName("suburb")] public string? Suburb { get; set; }
+    [JsonPropertyName("hamlet")] public string? Hamlet { get; set; }
     [JsonPropertyName("county")] public string? County { get; set; }
     [JsonPropertyName("state")] public string? State { get; set; }
 }

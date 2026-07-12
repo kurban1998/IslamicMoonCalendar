@@ -72,7 +72,8 @@ public class HijriCalendarService(HttpClient http, ILogger<HijriCalendarService>
             MonthNameRu = HijriDate.MonthNamesRu[monthIndex],
             MonthNameTransliterated = hijri.Month.En,
             Year = int.Parse(hijri.Year, CultureInfo.InvariantCulture),
-            WeekdayRu = WeekdaysRu[(int)gregorianDate.DayOfWeek]
+            WeekdayRu = WeekdaysRu[(int)gregorianDate.DayOfWeek],
+            IsSacredMonth = HijriDate.SacredMonthNumbers.Contains(hijri.Month.Number)
         };
     }
 }
