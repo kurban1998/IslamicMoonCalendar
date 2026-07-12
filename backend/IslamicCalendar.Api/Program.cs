@@ -12,6 +12,7 @@ builder.Services.Configure<TelegramBotOptions>(
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddMemoryCache();
 
 builder.Services.AddCors(corsOptions =>
 {
@@ -35,32 +36,42 @@ builder.Services.AddHttpClient<IHijriCalendarService, HijriCalendarService>((sp,
 {
     var opts = sp.GetRequiredService<IOptions<IslamicCalendarOptions>>().Value;
     client.BaseAddress = new Uri(opts.AladhanBaseUrl);
-    client.Timeout = TimeSpan.FromSeconds(10);
+    client.Timeout = TimeSpan.FromSeconds(6);
 });
 
 builder.Services.AddHttpClient<IPrayerTimesService, PrayerTimesService>((sp, client) =>
 {
     var opts = sp.GetRequiredService<IOptions<IslamicCalendarOptions>>().Value;
     client.BaseAddress = new Uri(opts.AladhanBaseUrl);
-    client.Timeout = TimeSpan.FromSeconds(10);
+    client.Timeout = TimeSpan.FromSeconds(6);
 });
 
 builder.Services.AddHttpClient<IQuranService, QuranService>((sp, client) =>
 {
     var opts = sp.GetRequiredService<IOptions<IslamicCalendarOptions>>().Value;
     client.BaseAddress = new Uri(opts.AlQuranBaseUrl);
-    client.Timeout = TimeSpan.FromSeconds(10);
+    client.Timeout = TimeSpan.FromSeconds(6);
 });
 
-builder.Services.AddHttpClient<IGeocodingService, NominatimGeocodingService>(client =>
+// Основной геокодер — BigDataCloud (без ключа, без строгих лимитов на дата-центровые IP)
+builder.Services.AddHttpClient<BigDataCloudGeocodingProvider>(client =>
+{
+    client.BaseAddress = new Uri("https://api.bigdatacloud.net/data/");
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
+
+// Резервный геокoder — Nominatim, на случай если BigDataCloud недоступен
+builder.Services.AddHttpClient<NominatimGeocodingProvider>(client =>
 {
     client.BaseAddress = new Uri("https://nominatim.openstreetmap.org/");
     // Политика использования Nominatim требует осмысленный User-Agent с контактом —
     // замените e-mail на свой перед продакшен-использованием
     client.DefaultRequestHeaders.UserAgent.ParseAdd(
-        "IslamicCalendarMiniApp/1.0 (contact: replace-with-your-email@example.com)");
-    client.Timeout = TimeSpan.FromSeconds(10);
+        "IslamicCalendarMiniApp/1.0 (contact: kurban.kurban1998@mail.ru");
+    client.Timeout = TimeSpan.FromSeconds(5);
 });
+
+builder.Services.AddSingleton<IGeocodingService, GeocodingService>();
 
 builder.Services.AddSingleton<IMoonPhaseService, MoonPhaseService>();
 builder.Services.AddSingleton<IHadithService, HadithService>();
