@@ -7,6 +7,9 @@
 
 ```
 telegram-hijri-calendar/
+  Dockerfile                     — мультистейдж-сборка backend + фронтенд в wwwroot
+  docker-compose.yml             — запуск одной командой (docker compose up --build)
+  .dockerignore
   backend/IslamicCalendar.Api/   — ASP.NET Core Web API (.NET 9)
     Program.cs                  — эндпоинты /api/calendar/month, /api/day
     Models/                     — DTO-модели ответов
@@ -59,7 +62,7 @@ Backend одновременно раздаёт и API, и статику фро
 дате — один день всегда показывает одну и ту же цитату, и если API Корана
 недоступен, автоматически подстраховывается хадисом.
 
-## Запуск локально
+## Запуск локально (без Docker)
 
 ```bash
 cd backend/IslamicCalendar.Api
@@ -68,6 +71,37 @@ dotnet run
 ```
 
 Откроется на `https://localhost:xxxx`. Swagger — на `/swagger` (только в Development).
+В этом варианте фронтенд из `frontend/` нужно вручную скопировать в
+`backend/IslamicCalendar.Api/wwwroot/`, либо открыть `frontend/index.html`
+отдельно и указать в `js/app.js` полный адрес backend в `API_BASE`.
+
+## Запуск через Docker
+
+Dockerfile лежит в корне репозитория, собирает backend и кладёт фронтенд
+в `wwwroot`, так что после сборки всё раздаётся с одного адреса — API и
+мини-приложение вместе, без проблем с CORS.
+
+```bash
+# из корня telegram-hijri-calendar/
+docker build -t islamic-calendar .
+docker run -p 8080:8080 islamic-calendar
+```
+
+Или через docker-compose:
+
+```bash
+docker compose up --build
+```
+
+Приложение будет доступно на `http://localhost:8080`. Настройки (метод расчёта
+намазов, координаты по умолчанию и т.д.) можно переопределить переменными
+окружения вида `IslamicCalendar__PrayerCalculationMethod=14` — см. примеры
+в `docker-compose.yml`.
+
+Для реального Telegram Mini App контейнер нужно развернуть на сервере с
+HTTPS (сам по себе Docker HTTPS не даёт — понадобится обратный прокси вроде
+Caddy/Nginx с сертификатом, либо PaaS с HTTPS из коробки — Railway, Render,
+Fly.io и т.д.).
 
 ## Подключение к Telegram
 

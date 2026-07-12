@@ -1,0 +1,15 @@
+services:
+  islamic-calendar:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      # Метод расчёта времени намазов и координаты по умолчанию можно
+      # переопределить через переменные окружения ASP.NET Core, например:
+      # - IslamicCalendar__PrayerCalculationMethod=14
+      # - IslamicCalendar__DefaultLatitude=55.7558
+      # - IslamicCalendar__DefaultLongitude=37.6173
+    restart: unless-stopped
