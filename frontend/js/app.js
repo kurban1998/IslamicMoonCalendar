@@ -155,14 +155,17 @@ el.backToHomeBtn.addEventListener("click", showHomeScreen);
 // Переключение экранов
 // ============================================================
 
+let todayHijri = null; // { year, month } по Хиджре — заполняется после загрузки карточки дня
+
 function showCalendarScreen() {
   el.homeScreen.classList.add("hidden");
   el.calendarScreen.classList.remove("hidden");
 
-  // Календарь всегда открывается на текущем месяце
-  const now = new Date();
-  viewYear = now.getFullYear();
-  viewMonth = now.getMonth() + 1;
+  // Календарь открывается на ТЕКУЩЕМ ЛУННОМ месяце (не григорианском!)
+  if (todayHijri) {
+    viewHijriYear = todayHijri.year;
+    viewHijriMonth = todayHijri.month;
+  }
   loadMonth();
 }
 
@@ -213,6 +216,9 @@ function renderTodayCard(card) {
     day: "numeric", month: "long", year: "numeric"
   });
 
+  // Запоминаем текущий лунный месяц/год — именно на нём будет открываться календарь
+  todayHijri = { year: card.hijri.year, month: card.hijri.month };
+
   // Запретные (священные) месяцы — розовая палитра карточки вместо голубой
   el.todayCard.classList.toggle("sacred-month", !!card.hijri.isSacredMonth);
   el.sacredBadge.classList.toggle("hidden", !card.hijri.isSacredMonth);
@@ -259,18 +265,21 @@ function renderTodayCard(card) {
 // Календарь — только просмотр, листание месяцев, без карточек по клику
 // ============================================================
 
-const today = new Date();
-let viewYear = today.getFullYear();
-let viewMonth = today.getMonth() + 1; // 1..12
+// viewHijriYear/viewHijriMonth — год/месяц ПО ХИДЖРЕ, который сейчас просматривается.
+// Стартовые значения — заглушка на случай открытия календаря до того, как
+// подгрузится сегодняшняя карточка (в норме showCalendarScreen их сразу
+// перезапишет реальными данными из todayHijri)
+let viewHijriYear = 1447;
+let viewHijriMonth = 1;
 
 function changeMonth(delta) {
-  viewMonth += delta;
-  if (viewMonth > 12) { viewMonth = 1; viewYear++; }
-  if (viewMonth < 1) { viewMonth = 12; viewYear--; }
+  const shifted = shiftHijriMonth(viewHijriYear, viewHijriMonth, delta);
+  viewHijriYear = shifted.year;
+  viewHijriMonth = shifted.month;
   loadMonth();
 }
 
-function shiftMonth(year, month, delta) {
+function shiftHijriMonth(year, month, delta) {
   let m = month + delta;
   let y = year;
   if (m > 12) { m = 1; y++; }
@@ -278,25 +287,25 @@ function shiftMonth(year, month, delta) {
   return { year: y, month: m };
 }
 
-async function fetchMonth(year, month) {
-  const res = await fetch(`${API_BASE}/calendar/month/${year}/${month}`);
-  if (!res.ok) throw new Error("Не удалось загрузить месяц");
+async function fetchHijriMonth(hijriYear, hijriMonth) {
+  const res = await fetch(`${API_BASE}/calendar/hijri-month/${hijriYear}/${hijriMonth}`);
+  if (!res.ok) throw new Error("Не удалось загрузить лунный месяц");
   return res.json();
 }
 
 async function loadMonth() {
   setLoading(true);
   try {
-    const prev = shiftMonth(viewYear, viewMonth, -1);
-    const next = shiftMonth(viewYear, viewMonth, 1);
+    const prev = shiftHijriMonth(viewHijriYear, viewHijriMonth, -1);
+    const next = shiftHijriMonth(viewHijriYear, viewHijriMonth, 1);
 
-    // Подгружаем соседние месяцы, чтобы показать реальные дни (не пустые
-    // ячейки) на границах сетки — приглушённые, чтобы визуально отличались
-    // от выбранного месяца
+    // Подгружаем соседние ЛУННЫЕ месяцы, чтобы показать реальные дни (не
+    // пустые ячейки) на границах сетки — приглушённые, чтобы визуально
+    // отличались от просматриваемого лунного месяца
     const [prevDays, currentDays, nextDays] = await Promise.all([
-      fetchMonth(prev.year, prev.month),
-      fetchMonth(viewYear, viewMonth),
-      fetchMonth(next.year, next.month),
+      fetchHijriMonth(prev.year, prev.month),
+      fetchHijriMonth(viewHijriYear, viewHijriMonth),
+      fetchHijriMonth(next.year, next.month),
     ]);
 
     renderMonth(currentDays, prevDays, nextDays);
@@ -312,15 +321,24 @@ function renderMonth(currentDays, prevDays, nextDays) {
   el.grid.innerHTML = "";
   if (currentDays.length === 0) return;
 
-  const midDay = currentDays[Math.floor(currentDays.length / 2)];
-  el.hijriTitle.textContent = `${midDay.hijri.monthNameRu} ${midDay.hijri.year}`;
-  const gregDate = new Date(currentDays[0].gregorianDate);
-  el.gregTitle.textContent = gregDate.toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+  // Все дни currentDays принадлежат ровно одному лунному месяцу — можно
+  // безопасно брать название/год с первого дня, midpoint-хак не нужен
+  el.hijriTitle.textContent = `${currentDays[0].hijri.monthNameRu} ${currentDays[0].hijri.year}`;
+
+  // Лунный месяц почти всегда захватывает два григорианских — показываем
+  // диапазон дат вместо одного "месяц год"
+  const firstG = new Date(currentDays[0].gregorianDate);
+  const lastG = new Date(currentDays[currentDays.length - 1].gregorianDate);
+  const firstLabel = firstG.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+  const lastLabel = lastG.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+  el.gregTitle.textContent = `${firstLabel} — ${lastLabel}`;
 
   // Неделя начинается с понедельника
   let firstWeekday = new Date(currentDays[0].gregorianDate).getDay(); // 0 = вс
   firstWeekday = firstWeekday === 0 ? 6 : firstWeekday - 1; // 0 = пн
 
+  // leadingDays/trailingDays — хвосты СОСЕДНИХ ЛУННЫХ месяцев, а не
+  // григорианских: именно это и делает подсветку "по лунному календарю"
   const leadingDays = firstWeekday > 0 ? prevDays.slice(prevDays.length - firstWeekday) : [];
 
   const totalSoFar = leadingDays.length + currentDays.length;
@@ -339,7 +357,7 @@ function renderMonth(currentDays, prevDays, nextDays) {
     if (day.isFriday) cell.classList.add("is-friday");
     if (day.hijri.isSacredMonth) cell.classList.add("is-sacred");
     if (day.isToday) cell.classList.add("is-today");
-    if (otherMonth) cell.classList.add("other-month");
+    if (otherMonth) cell.classList.add("other-month"); // день из соседнего ЛУННОГО месяца
 
     const gregSpan = document.createElement("span");
     gregSpan.className = "day-cell__greg";

@@ -9,6 +9,7 @@ public interface IHijriCalendarService
 {
     Task<HijriDate> ConvertAsync(DateOnly date, CancellationToken ct = default);
     Task<List<MonthCalendarDay>> GetMonthAsync(int year, int month, CancellationToken ct = default);
+    Task<List<MonthCalendarDay>> GetHijriMonthAsync(int hijriYear, int hijriMonth, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -71,6 +72,55 @@ public class HijriCalendarService(HttpClient http, IMemoryCache cache, ILogger<H
         {
             logger.LogWarning("Aladhan gToHCalendar не вернул данные для {Month}/{Year}", month, year);
             throw new InvalidOperationException("Не удалось получить календарь по Хиджре из Aladhan API");
+        }
+
+        var todayNow = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var days = response.Data.Select(entry =>
+        {
+            var gDate = DateOnly.ParseExact(entry.Gregorian.Date, "dd-MM-yyyy", CultureInfo.InvariantCulture);
+            return new MonthCalendarDay
+            {
+                GregorianDate = gDate,
+                Hijri = MapHijri(entry.Hijri, gDate),
+                IsFriday = gDate.DayOfWeek == DayOfWeek.Friday,
+                IsToday = gDate == todayNow
+            };
+        }).ToList();
+
+        cache.Set(cacheKey, days, CacheDuration);
+        return days;
+    }
+
+    /// <summary>
+    /// Возвращает все дни ОДНОГО лунного (хиджра) месяца через Aladhan hToGCalendar —
+    /// в отличие от GetMonthAsync (григорианский месяц), здесь границы месяца
+    /// определяются по Хиджре. Это важно для UI: календарь листается по лунным
+    /// месяцам, и именно этот набор дней считается "текущим" (не приглушённым) —
+    /// григорианская граница месяца тут вообще не участвует.
+    /// </summary>
+    public async Task<List<MonthCalendarDay>> GetHijriMonthAsync(int hijriYear, int hijriMonth, CancellationToken ct = default)
+    {
+        var cacheKey = $"hijri-month-h:{hijriYear}-{hijriMonth}";
+        if (cache.TryGetValue(cacheKey, out List<MonthCalendarDay>? cached) && cached is not null)
+        {
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            return cached.Select(d => new MonthCalendarDay
+            {
+                GregorianDate = d.GregorianDate,
+                Hijri = d.Hijri,
+                IsFriday = d.IsFriday,
+                IsToday = d.GregorianDate == today
+            }).ToList();
+        }
+
+        var response = await http.GetFromJsonAsync<ApiEnvelope<List<AladhanDateEntry>>>(
+            $"hToGCalendar/{hijriMonth}/{hijriYear}", ct);
+
+        if (response?.Data is null)
+        {
+            logger.LogWarning("Aladhan hToGCalendar не вернул данные для {Month}/{Year} по Хиджре", hijriMonth, hijriYear);
+            throw new InvalidOperationException("Не удалось получить лунный месяц из Aladhan API");
         }
 
         var todayNow = DateOnly.FromDateTime(DateTime.UtcNow);

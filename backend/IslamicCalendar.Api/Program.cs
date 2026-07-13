@@ -93,7 +93,8 @@ app.UseStaticFiles();
 
 var api = app.MapGroup("/api");
 
-// GET /api/calendar/month/2026/7 — сетка дней месяца для календаря
+// GET /api/calendar/month/2026/7 — сетка дней ГРИГОРИАНСКОГО месяца (не используется
+// текущим фронтендом, оставлен для полноты API — см. hijri-month ниже)
 api.MapGet("/calendar/month/{year:int}/{month:int}", async (
         int year, int month, IHijriCalendarService hijriService, CancellationToken ct) =>
     {
@@ -104,6 +105,21 @@ api.MapGet("/calendar/month/{year:int}/{month:int}", async (
         return Results.Ok(days);
     })
     .WithName("GetMonth")
+    .Produces<List<MonthCalendarDay>>();
+
+// GET /api/calendar/hijri-month/1447/7 — сетка дней ЛУННОГО (хиджра) месяца.
+// Именно этот эндпоинт использует календарь на фронтенде: границы месяца
+// определяются по Хиджре, а не по григорианскому календарю
+api.MapGet("/calendar/hijri-month/{hijriYear:int}/{hijriMonth:int}", async (
+        int hijriYear, int hijriMonth, IHijriCalendarService hijriService, CancellationToken ct) =>
+    {
+        if (hijriMonth is < 1 or > 12)
+            return Results.BadRequest(new { error = "Месяц должен быть от 1 до 12" });
+
+        var days = await hijriService.GetHijriMonthAsync(hijriYear, hijriMonth, ct);
+        return Results.Ok(days);
+    })
+    .WithName("GetHijriMonth")
     .Produces<List<MonthCalendarDay>>();
 
 // GET /api/day?date=2026-07-12&lat=55.75&lon=37.61 — полная карточка дня
