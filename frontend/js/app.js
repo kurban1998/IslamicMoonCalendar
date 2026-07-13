@@ -22,16 +22,36 @@ let userLocation = null; // { lat, lon }
 
 function initLocation() {
   return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+
+    // Страховочный таймаут: если ни LocationManager, ни navigator.geolocation
+    // не ответят (например, приложение открыто просто ссылкой в браузере,
+    // а не внутри настоящего Telegram — тогда колбэк LocationManager.init
+    // может вообще никогда не вызваться), приложение всё равно должно
+    // загрузиться — просто без геолокации, backend возьмёт город по умолчанию
+    const safetyTimeout = setTimeout(finish, 4000);
+
     // Telegram Bot API 8.0+: встроенный LocationManager мини-приложений
     if (tg?.LocationManager) {
       try {
         tg.LocationManager.init(() => {
-          tg.LocationManager.getLocation((data) => {
-            if (data?.latitude) {
-              userLocation = { lat: data.latitude, lon: data.longitude };
-            }
-            resolve();
-          });
+          try {
+            tg.LocationManager.getLocation((data) => {
+              if (data?.latitude) {
+                userLocation = { lat: data.latitude, lon: data.longitude };
+              }
+              clearTimeout(safetyTimeout);
+              finish();
+            });
+          } catch {
+            clearTimeout(safetyTimeout);
+            finish();
+          }
         });
         return;
       } catch {
@@ -43,15 +63,20 @@ function initLocation() {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           userLocation = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-          resolve();
+          clearTimeout(safetyTimeout);
+          finish();
         },
-        () => resolve(),
-        { timeout: 5000 }
+        () => {
+          clearTimeout(safetyTimeout);
+          finish();
+        },
+        { timeout: 4000 }
       );
       return;
     }
 
-    resolve(); // геолокация недоступна — backend подставит город по умолчанию
+    clearTimeout(safetyTimeout);
+    finish(); // геолокация недоступна — backend подставит город по умолчанию
   });
 }
 
@@ -116,8 +141,14 @@ el.openCalendarBtn.addEventListener("click", showCalendarScreen);
 el.backToHomeBtn.addEventListener("click", showHomeScreen);
 
 (async function start() {
-  await initLocation();
-  await loadTodayCard();
+  try {
+    await initLocation();
+    await loadTodayCard();
+  } catch (err) {
+    console.error("Не удалось запустить приложение:", err);
+    el.spinner.classList.add("hidden");
+    el.quoteText.textContent = "Произошла ошибка при запуске приложения. Проверьте консоль браузера.";
+  }
 })();
 
 // ============================================================
@@ -147,6 +178,9 @@ function showHomeScreen() {
 async function loadTodayCard() {
   el.spinner.classList.remove("hidden");
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
   try {
     const dateStr = formatDateLocal(new Date());
     const params = new URLSearchParams({ date: dateStr });
@@ -155,14 +189,16 @@ async function loadTodayCard() {
       params.set("lon", userLocation.lon);
     }
 
-    const res = await fetch(`${API_BASE}/day?${params.toString()}`);
-    if (!res.ok) throw new Error("Не удалось загрузить карточку дня");
+    const res = await fetch(`${API_BASE}/day?${params.toString()}`, { signal: controller.signal });
+    if (!res.ok) throw new Error(`Backend ответил статусом ${res.status}`);
     const card = await res.json();
     renderTodayCard(card);
   } catch (err) {
     console.error(err);
-    el.quoteText.textContent = "Не удалось загрузить данные дня. Проверьте подключение к API.";
+    const reason = err?.name === "AbortError" ? "истекло время ожидания ответа" : (err?.message || "неизвестная ошибка");
+    el.quoteText.textContent = `Не удалось загрузить данные дня (${reason}). Проверьте, что backend запущен и доступен по адресу ${API_BASE}.`;
   } finally {
+    clearTimeout(timeoutId);
     el.spinner.classList.add("hidden");
   }
 }
