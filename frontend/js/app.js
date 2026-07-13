@@ -55,35 +55,32 @@ function initLocation() {
   });
 }
 
-// ============================================================
-// Состояние календаря
-// ============================================================
-
-const today = new Date();
-let viewYear = today.getFullYear();
-let viewMonth = today.getMonth() + 1; // 1..12
+function formatDateLocal(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
 // ============================================================
 // DOM-элементы
 // ============================================================
 
 const el = {
-  weekdayRow: document.getElementById("weekdayRow"),
-  grid: document.getElementById("calendarGrid"),
-  loading: document.getElementById("loadingIndicator"),
-  hijriTitle: document.getElementById("hijriMonthTitle"),
-  gregTitle: document.getElementById("gregMonthTitle"),
-  prevBtn: document.getElementById("prevMonth"),
-  nextBtn: document.getElementById("nextMonth"),
+  homeScreen: document.getElementById("homeScreen"),
+  calendarScreen: document.getElementById("calendarScreen"),
+  openCalendarBtn: document.getElementById("openCalendarBtn"),
+  backToHomeBtn: document.getElementById("backToHome"),
 
-  overlay: document.getElementById("dayCardOverlay"),
-  sheet: document.getElementById("dayCardSheet"),
-  closeBtn: document.getElementById("closeCard"),
+  // Карточка дня
+  todayCard: document.getElementById("todayCard"),
+  spinner: document.getElementById("cardSpinner"),
   moonIcon: document.getElementById("moonIcon"),
   moonCaption: document.getElementById("moonCaption"),
   cardWeekday: document.getElementById("cardWeekday"),
   cardHijriDay: document.getElementById("cardHijriDay"),
   cardHijriMonth: document.getElementById("cardHijriMonth"),
+  sacredBadge: document.getElementById("sacredBadge"),
   cardGregDate: document.getElementById("cardGregDate"),
   cardLocation: document.getElementById("cardLocation"),
   prayerList: document.getElementById("prayerTimesList"),
@@ -92,6 +89,15 @@ const el = {
   quoteTypeLabel: document.getElementById("quoteTypeLabel"),
   quoteText: document.getElementById("quoteText"),
   quoteSource: document.getElementById("quoteSource"),
+
+  // Календарь
+  weekdayRow: document.getElementById("weekdayRow"),
+  grid: document.getElementById("calendarGrid"),
+  loading: document.getElementById("loadingIndicator"),
+  hijriTitle: document.getElementById("hijriMonthTitle"),
+  gregTitle: document.getElementById("gregMonthTitle"),
+  prevBtn: document.getElementById("prevMonth"),
+  nextBtn: document.getElementById("nextMonth"),
 };
 
 // ============================================================
@@ -106,101 +112,43 @@ WEEKDAYS_SHORT.forEach((w) => {
 
 el.prevBtn.addEventListener("click", () => changeMonth(-1));
 el.nextBtn.addEventListener("click", () => changeMonth(1));
-el.closeBtn.addEventListener("click", closeDayCard);
-el.overlay.addEventListener("click", (e) => {
-  if (e.target === el.overlay) closeDayCard();
-});
+el.openCalendarBtn.addEventListener("click", showCalendarScreen);
+el.backToHomeBtn.addEventListener("click", showHomeScreen);
 
 (async function start() {
   await initLocation();
-  await loadMonth();
+  await loadTodayCard();
 })();
 
 // ============================================================
-// Загрузка и рендер месяца
+// Переключение экранов
 // ============================================================
 
-function changeMonth(delta) {
-  viewMonth += delta;
-  if (viewMonth > 12) { viewMonth = 1; viewYear++; }
-  if (viewMonth < 1) { viewMonth = 12; viewYear--; }
+function showCalendarScreen() {
+  el.homeScreen.classList.add("hidden");
+  el.calendarScreen.classList.remove("hidden");
+
+  // Календарь всегда открывается на текущем месяце
+  const now = new Date();
+  viewYear = now.getFullYear();
+  viewMonth = now.getMonth() + 1;
   loadMonth();
 }
 
-async function loadMonth() {
-  setLoading(true);
-  try {
-    const res = await fetch(`${API_BASE}/calendar/month/${viewYear}/${viewMonth}`);
-    if (!res.ok) throw new Error("Не удалось загрузить календарь");
-    const days = await res.json();
-    renderMonth(days);
-  } catch (err) {
-    console.error(err);
-    el.grid.innerHTML = `<div class="loading-indicator">Не удалось загрузить календарь. Проверьте подключение к API.</div>`;
-  } finally {
-    setLoading(false);
-  }
-}
-
-function renderMonth(days) {
-  el.grid.innerHTML = "";
-
-  if (days.length === 0) return;
-
-  // Заголовок: месяц Хиджры (берём из первого дня месяца — обычно совпадает
-  // на большей части месяца, переход виден по числу/названию у самих ячеек)
-  const midDay = days[Math.floor(days.length / 2)];
-  el.hijriTitle.textContent = `${midDay.hijri.monthNameRu} ${midDay.hijri.year}`;
-  const gregDate = new Date(days[0].gregorianDate);
-  el.gregTitle.textContent = gregDate.toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
-
-  // Пустые ячейки перед первым днём месяца (неделя начинается с понедельника)
-  const firstDate = new Date(days[0].gregorianDate);
-  let firstWeekday = firstDate.getDay(); // 0 = вс
-  firstWeekday = firstWeekday === 0 ? 6 : firstWeekday - 1; // 0 = пн
-
-  for (let i = 0; i < firstWeekday; i++) {
-    const empty = document.createElement("div");
-    empty.className = "day-cell empty";
-    el.grid.appendChild(empty);
-  }
-
-  days.forEach((day) => {
-    const cell = document.createElement("div");
-    cell.className = "day-cell";
-    if (day.isFriday) cell.classList.add("is-friday");
-    if (day.isToday) cell.classList.add("is-today");
-
-    const gregSpan = document.createElement("span");
-    gregSpan.className = "day-cell__greg";
-    gregSpan.textContent = new Date(day.gregorianDate).getDate();
-
-    const hijriSpan = document.createElement("span");
-    hijriSpan.className = "day-cell__hijri";
-    hijriSpan.textContent = day.hijri.day;
-
-    cell.appendChild(gregSpan);
-    cell.appendChild(hijriSpan);
-
-    cell.addEventListener("click", () => openDayCard(day.gregorianDate));
-    el.grid.appendChild(cell);
-  });
-}
-
-function setLoading(isLoading) {
-  el.loading.classList.toggle("hidden", !isLoading);
+function showHomeScreen() {
+  el.calendarScreen.classList.add("hidden");
+  el.homeScreen.classList.remove("hidden");
 }
 
 // ============================================================
-// Карточка дня
+// Карточка сегодняшнего дня
 // ============================================================
 
-async function openDayCard(dateStr) {
-  el.overlay.classList.remove("hidden");
-  el.sheet.classList.remove("hidden");
-  tg?.HapticFeedback?.impactOccurred?.("light");
+async function loadTodayCard() {
+  el.spinner.classList.remove("hidden");
 
   try {
+    const dateStr = formatDateLocal(new Date());
     const params = new URLSearchParams({ date: dateStr });
     if (userLocation) {
       params.set("lat", userLocation.lat);
@@ -210,19 +158,16 @@ async function openDayCard(dateStr) {
     const res = await fetch(`${API_BASE}/day?${params.toString()}`);
     if (!res.ok) throw new Error("Не удалось загрузить карточку дня");
     const card = await res.json();
-    renderDayCard(card);
+    renderTodayCard(card);
   } catch (err) {
     console.error(err);
     el.quoteText.textContent = "Не удалось загрузить данные дня. Проверьте подключение к API.";
+  } finally {
+    el.spinner.classList.add("hidden");
   }
 }
 
-function closeDayCard() {
-  el.overlay.classList.add("hidden");
-  el.sheet.classList.add("hidden");
-}
-
-function renderDayCard(card) {
+function renderTodayCard(card) {
   const gregDate = new Date(card.gregorianDate);
 
   el.cardWeekday.textContent = card.hijri.weekdayRu;
@@ -231,6 +176,10 @@ function renderDayCard(card) {
   el.cardGregDate.textContent = gregDate.toLocaleDateString("ru-RU", {
     day: "numeric", month: "long", year: "numeric"
   });
+
+  // Запретные (священные) месяцы — розовая палитра карточки вместо голубой
+  el.todayCard.classList.toggle("sacred-month", !!card.hijri.isSacredMonth);
+  el.sacredBadge.classList.toggle("hidden", !card.hijri.isSacredMonth);
 
   // Фаза Луны
   const phaseFraction = card.moon.ageDays / card.moon.synodicMonthDays;
@@ -268,6 +217,110 @@ function renderDayCard(card) {
   el.quoteTypeLabel.textContent = card.quote.type === "ayah" ? "Аят из Корана" : "Хадис";
   el.quoteText.textContent = card.quote.textRu;
   el.quoteSource.textContent = card.quote.source;
+}
+
+// ============================================================
+// Календарь — только просмотр, листание месяцев, без карточек по клику
+// ============================================================
+
+const today = new Date();
+let viewYear = today.getFullYear();
+let viewMonth = today.getMonth() + 1; // 1..12
+
+function changeMonth(delta) {
+  viewMonth += delta;
+  if (viewMonth > 12) { viewMonth = 1; viewYear++; }
+  if (viewMonth < 1) { viewMonth = 12; viewYear--; }
+  loadMonth();
+}
+
+function shiftMonth(year, month, delta) {
+  let m = month + delta;
+  let y = year;
+  if (m > 12) { m = 1; y++; }
+  if (m < 1) { m = 12; y--; }
+  return { year: y, month: m };
+}
+
+async function fetchMonth(year, month) {
+  const res = await fetch(`${API_BASE}/calendar/month/${year}/${month}`);
+  if (!res.ok) throw new Error("Не удалось загрузить месяц");
+  return res.json();
+}
+
+async function loadMonth() {
+  setLoading(true);
+  try {
+    const prev = shiftMonth(viewYear, viewMonth, -1);
+    const next = shiftMonth(viewYear, viewMonth, 1);
+
+    // Подгружаем соседние месяцы, чтобы показать реальные дни (не пустые
+    // ячейки) на границах сетки — приглушённые, чтобы визуально отличались
+    // от выбранного месяца
+    const [prevDays, currentDays, nextDays] = await Promise.all([
+      fetchMonth(prev.year, prev.month),
+      fetchMonth(viewYear, viewMonth),
+      fetchMonth(next.year, next.month),
+    ]);
+
+    renderMonth(currentDays, prevDays, nextDays);
+  } catch (err) {
+    console.error(err);
+    el.grid.innerHTML = `<div class="loading-indicator">Не удалось загрузить календарь. Проверьте подключение к API.</div>`;
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderMonth(currentDays, prevDays, nextDays) {
+  el.grid.innerHTML = "";
+  if (currentDays.length === 0) return;
+
+  const midDay = currentDays[Math.floor(currentDays.length / 2)];
+  el.hijriTitle.textContent = `${midDay.hijri.monthNameRu} ${midDay.hijri.year}`;
+  const gregDate = new Date(currentDays[0].gregorianDate);
+  el.gregTitle.textContent = gregDate.toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+
+  // Неделя начинается с понедельника
+  let firstWeekday = new Date(currentDays[0].gregorianDate).getDay(); // 0 = вс
+  firstWeekday = firstWeekday === 0 ? 6 : firstWeekday - 1; // 0 = пн
+
+  const leadingDays = firstWeekday > 0 ? prevDays.slice(prevDays.length - firstWeekday) : [];
+
+  const totalSoFar = leadingDays.length + currentDays.length;
+  const trailingCount = (7 - (totalSoFar % 7)) % 7;
+  const trailingDays = nextDays.slice(0, trailingCount);
+
+  const cells = [
+    ...leadingDays.map((day) => ({ day, otherMonth: true })),
+    ...currentDays.map((day) => ({ day, otherMonth: false })),
+    ...trailingDays.map((day) => ({ day, otherMonth: true })),
+  ];
+
+  cells.forEach(({ day, otherMonth }) => {
+    const cell = document.createElement("div");
+    cell.className = "day-cell";
+    if (day.isFriday) cell.classList.add("is-friday");
+    if (day.hijri.isSacredMonth) cell.classList.add("is-sacred");
+    if (day.isToday) cell.classList.add("is-today");
+    if (otherMonth) cell.classList.add("other-month");
+
+    const gregSpan = document.createElement("span");
+    gregSpan.className = "day-cell__greg";
+    gregSpan.textContent = new Date(day.gregorianDate).getDate();
+
+    const hijriSpan = document.createElement("span");
+    hijriSpan.className = "day-cell__hijri";
+    hijriSpan.textContent = day.hijri.day;
+
+    cell.appendChild(gregSpan);
+    cell.appendChild(hijriSpan);
+    el.grid.appendChild(cell);
+  });
+}
+
+function setLoading(isLoading) {
+  el.loading.classList.toggle("hidden", !isLoading);
 }
 
 // ============================================================
